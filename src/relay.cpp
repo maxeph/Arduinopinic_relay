@@ -6,7 +6,7 @@
 #define RX_433 2 // Pin connecter to Transmitter
 
 
-byte msgpacket[] = {1,2,3,4}; // init unsigned bytes to be sent over
+byte buffer[4] = {6,7,8,9}; // init unsigned bytes to be sent over
 
 union intarray { // shared memory for int and byte array to get its bytes
   int ints;
@@ -23,7 +23,7 @@ return result.ints;
 void setup() {
 
   man.setupReceive(RX_433, MAN_600);
-  man.beginReceive();
+  man.beginReceiveArray(4, buffer);
 
   if (DEBUG) {  // Sending over Serial to make sure it works
     Serial.begin(9600);
@@ -33,11 +33,15 @@ void setup() {
   }
 
 void loop() {
-  if (DEBUG) {
-  if (man.receiveComplete()) {
-      byte m = man.getMessage();
-      man.beginReceive(); //start listening for next message right after you retrieve the message
-      Serial.println(m,HEX);
-}
-}
+  if (man.receiveComplete())
+  {
+    uint8_t receivedSize = 0;
+
+    //do something with the data in 'buffer' here before you start receiving to the same buffer again
+    receivedSize = buffer[0];
+    for(uint8_t i=1; i<receivedSize; i++)
+        Serial.println(buffer[i]);
+
+    man.beginReceiveArray(4, buffer);
+  }
 }
