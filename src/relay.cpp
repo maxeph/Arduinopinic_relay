@@ -8,7 +8,7 @@
 #define PCKTLEN MSGLEN+1
 
 
-byte buffer[PCKTLEN+1] = {}; // init unsigned bytes to be sent over
+byte buffer[PCKTLEN] = {}; // init unsigned bytes to be sent over
 
 union intarray { // shared memory for int and byte array to get its bytes
   int ints;
