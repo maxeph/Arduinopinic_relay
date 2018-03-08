@@ -6,7 +6,8 @@
 
 #define DEBUG 1 // if 1, debug with Serial
 #define RX_433 2 // Pin connecter to Transmitter
-#define MSGLEN 4 // Msg len is 4 = 2 signed int (2 bytes each)
+#define NBPARAM 3 // Number of int sent
+#define MSGLEN NBPARAM*2 // Msg len is 4 = 2 signed int (2 bytes each)
 #define PCKTLEN MSGLEN+3 // +1 for the lenght of the msgpacket +2 for CRC 16
 
 // Declaring structs
@@ -20,7 +21,7 @@ union intarray { // shared memory for int and byte array to get its bytes
 
 byte buffer[PCKTLEN] = {}; // init unsigned bytes to be sent over
 FastCRC16 CRC16;
-intarray itempext, itempeau, crc_local, crc_rx;
+intarray itempext, itempeau, ihumid, crc_local, crc_rx;
 
 // Declaring functions
 
@@ -31,11 +32,13 @@ int bytes2int(byte arg[2]) { // Convert a 2byte array into int
   return result.ints;
 }
 
-void splitpacket(byte msg[PCKTLEN], byte part1[2], byte part2[2]) { // build array to be sent
+void splitpacket(byte msg[PCKTLEN], byte part1[2], byte part2[2], byte part3[3]) { // build array to be sent
   part1[0] = msg[1];
   part1[1] = msg[2];
   part2[0] = msg[3];
   part2[1] = msg[4];
+  part3[0] = msg[5];
+  part3[1] = msg[6];
 }
 
 void setup() {
@@ -61,11 +64,13 @@ void loop() {
     for(uint8_t i=0; i<receivedSize; i++) {
       Serial.println(buffer[i],HEX);
     }
-    splitpacket(buffer, itempext.part, itempeau.part);
+    splitpacket(buffer, itempext.part, itempeau.part, ihumid.part);
     Serial.print("Température extérieure : ");
     Serial.println(float(itempext.ints)/100);
     Serial.print("Température eau : ");
     Serial.println(float(itempeau.ints)/100);
+    Serial.print("Humidité : ");
+    Serial.println(float(ihumid.ints)/100);
     Serial.println("#######################################");
     crc_rx.part[0]= buffer[PCKTLEN-2];
     crc_rx.part[1]= buffer[PCKTLEN-1];
