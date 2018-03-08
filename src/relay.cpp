@@ -61,25 +61,25 @@ void loop() {
     receivedSize = buffer[0]; // Storing the length of the packet received
 
     if (DEBUG) {
-    Serial.print("########## PACKET N° "); // Showing raw data receivedSize
-    Serial.print(nloop);
-    Serial.println(" #################");
-    Serial.println("Raw data : ");
-    Serial.print("Packet length : ");
-    Serial.println(buffer[0],HEX);
-    for(uint8_t i=1;i<receivedSize-2;i++) {
-      if (i % 2 != 0) {
-        Serial.print("Msg n°");
-        Serial.print((i/2)+1);
-        Serial.print(" : ");
-        Serial.print(buffer[i],HEX);
-        Serial.print(" ");
-      }
-      else {
-        Serial.println(buffer[i],HEX);
+      Serial.print("########## PACKET N° "); // Showing raw data receivedSize
+      Serial.print(nloop);
+      Serial.println(" #################");
+      Serial.println("Raw data : ");
+      Serial.print("Packet length : ");
+      Serial.println(buffer[0],HEX);
+      for(uint8_t i=1;i<receivedSize-2;i++) {
+        if (i % 2 != 0) {
+          Serial.print("Msg n°");
+          Serial.print((i/2)+1);
+          Serial.print(" : ");
+          Serial.print(buffer[i],HEX);
+          Serial.print(" ");
+        }
+        else {
+          Serial.println(buffer[i],HEX);
+        }
       }
     }
-  }
 
     crc_rx.part[0]= buffer[PCKTLEN-2]; // Received 2bytes CRC
     crc_rx.part[1]= buffer[PCKTLEN-1];
@@ -88,33 +88,33 @@ void loop() {
     crc_local.ints = CRC16.ccitt(buffer, sizeof(buffer)); // Calculating own CRC
 
     if (DEBUG) {  // Showing CRC
-    Serial.print("Received CRC : ");
-    Serial.print(crc_rx.part[0],HEX);
-    Serial.println(crc_rx.part[1],HEX);
-    Serial.print("Local CRC : ");
-    Serial.print(crc_local.part[0],HEX);
-    Serial.println(crc_local.part[1],HEX);
-    if (crc_local.ints == crc_rx.ints) {
-      Serial.println("CRC Check ok");
-    }
-    else{
-      Serial.println("ERROR CRC!!!");
-    }
+      Serial.print("Received CRC : ");
+      Serial.print(crc_rx.part[0],HEX);
+      Serial.println(crc_rx.part[1],HEX);
+      Serial.print("Local CRC : ");
+      Serial.print(crc_local.part[0],HEX);
+      Serial.println(crc_local.part[1],HEX);
+      if (crc_local.ints == crc_rx.ints) {
+        Serial.println("CRC Check ok");
+      }
+      else{
+        Serial.println("ERROR CRC!!!");
+      }
     }
 
 
     splitpacket(buffer, itempext.part, itempeau.part, ihumid.part); // Splitting packet in various variables
 
     if (DEBUG) {  // Showing Final values
-    Serial.print("Température extérieure : ");
-    Serial.println(float(itempext.ints)/100);
-    Serial.print("Température eau : ");
-    Serial.println(float(itempeau.ints)/100);
-    Serial.print("Humidité : ");
-    Serial.println(float(ihumid.ints)/100);
-    nloop++;
-  }
-    
+      Serial.print("Température extérieure : ");
+      Serial.println(float(itempext.ints)/100);
+      Serial.print("Température eau : ");
+      Serial.println(float(itempeau.ints)/100);
+      Serial.print("Humidité : ");
+      Serial.println(float(ihumid.ints)/100);
+      nloop++;
+    }
+
     man.beginReceiveArray(PCKTLEN, buffer);
   }
 }
