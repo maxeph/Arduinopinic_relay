@@ -20,7 +20,7 @@ union intarray { // shared memory for int and byte array to get its bytes
 
 byte buffer[PCKTLEN] = {}; // init unsigned bytes to be sent over
 FastCRC16 CRC16;
-intarray itempext, itempeau, crcc, crcc_r;
+intarray itempext, itempeau, crc_local, crc_rx;
 
 // Declaring functions
 
@@ -67,17 +67,17 @@ void loop() {
     Serial.print("Température eau : ");
     Serial.println(float(itempeau.ints)/100);
     Serial.println("#######################################");
-    crcc_r.part[0]= buffer[5];
-    crcc_r.part[1]= buffer[6];
-    buffer[5] = 0;
-    buffer[6] = 0;
+    crc_rx.part[0]= buffer[PCKTLEN-2];
+    crc_rx.part[1]= buffer[PCKTLEN-1];
+    buffer[PCKTLEN-2] = 0;
+    buffer[PCKTLEN-1] = 0;
 
-    crcc.ints = CRC16.ccitt(buffer, sizeof(buffer));
-    Serial.print(crcc.part[0],HEX);
-    Serial.println(crcc.part[1],HEX);
-    Serial.print(crcc_r.part[0],HEX);
-    Serial.println(crcc_r.part[1],HEX);
-    if (crcc.ints == crcc_r.ints) {
+    crc_local.ints = CRC16.ccitt(buffer, sizeof(buffer));
+    Serial.print(crc_local.part[0],HEX);
+    Serial.println(crc_local.part[1],HEX);
+    Serial.print(crc_rx.part[0],HEX);
+    Serial.println(crc_rx.part[1],HEX);
+    if (crc_local.ints == crc_rx.ints) {
       Serial.println("CRC Check ok");
     }
 
