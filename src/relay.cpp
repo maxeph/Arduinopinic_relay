@@ -22,7 +22,7 @@ union intarray { // shared memory for int and byte array to get its bytes
 byte buffer[PCKTLEN] = {}; // init unsigned bytes to be sent over
 FastCRC16 CRC16;
 intarray itempext, itempeau, ihumid, crc_local, crc_rx;
-int nloop = 1;
+int nloop = 1; // counting n° of receipts
 
 // Declaring functions
 
