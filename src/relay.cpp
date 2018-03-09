@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Manchester.h>  //Initialising 433 wireless library
 #include <FastCRC.h>  //CRCcheck library
+#include <Wire.h> // I2C library
 
 // Declaring definitions
 
@@ -9,6 +10,7 @@
 #define NBPARAM 3 // Number of int sent
 #define MSGLEN NBPARAM*2 // Msg len is 4 = 2 signed int (2 bytes each)
 #define PCKTLEN MSGLEN+3 // +1 for the lenght of the msgpacket +2 for CRC 16
+#define I2C_ADDR 0x24 // +1 for the length of the msgpacket +2 for CRC 16
 
 // Declaring structs
 
@@ -42,10 +44,18 @@ void splitpacket(byte msg[PCKTLEN], byte part1[2], byte part2[2], byte part3[3])
   part3[1] = msg[6];
 }
 
+// Declaring handler
+
+void PiRequete() {
+      Wire.write( buffer, sizeof(buffer) );
+        }
+
 void setup() {
 
-  man.setupReceive(RX_433, MAN_600);
-  man.beginReceiveArray(PCKTLEN, buffer);
+  man.setupReceive(RX_433, MAN_600); // Init 433 connection
+  man.beginReceiveArray(PCKTLEN, buffer); // begin listening
+  Wire.begin(0x24); // begin I2C connection as master
+  Wire.onRequest(PiRequete); // declaring request handler
 
   if (DEBUG) {  // Sending over Serial to make sure it works
     Serial.begin(9600);
@@ -86,7 +96,8 @@ void loop() {
     buffer[PCKTLEN-2] = 0;
     buffer[PCKTLEN-1] = 0;
     crc_local.ints = CRC16.ccitt(buffer, sizeof(buffer)); // Calculating own CRC
-
+    buffer[PCKTLEN-2] = crc_rx.part[0];
+    buffer[PCKTLEN-1] = crc_rx.part[1];
     if (DEBUG) {  // Showing CRC
       Serial.print("Received CRC : ");
       Serial.print(crc_rx.part[0],HEX);
