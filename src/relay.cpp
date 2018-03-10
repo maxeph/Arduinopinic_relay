@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Manchester.h>  //Initialising 433 wireless library
-#include <FastCRC.h>  //CRCcheck library
+#include <Crc16.h>  // CRCcheck library
+#include <Wire.h> // I2C library
 
 // Declaring definitions
 
@@ -9,6 +10,7 @@
 #define NBPARAM 3 // Number of int sent
 #define MSGLEN NBPARAM*2 // Msg len is 4 = 2 signed int (2 bytes each)
 #define PCKTLEN MSGLEN+3 // +1 for the lenght of the msgpacket +2 for CRC 16
+#define I2C_ADDR 0x24 // +1 for the length of the msgpacket +2 for CRC 16
 
 // Declaring structs
 
@@ -20,7 +22,6 @@ union intarray { // shared memory for int and byte array to get its bytes
 // Declaring variables
 
 byte buffer[PCKTLEN] = {}; // init unsigned bytes to be sent over
-FastCRC16 CRC16;
 intarray itempext, itempeau, ihumid, crc_local, crc_rx;
 int nloop = 1; // counting n° of receipts
 
@@ -33,6 +34,14 @@ int bytes2int(byte arg[2]) { // Convert a 2byte array into int
   return result.ints;
 }
 
+int getcrc(byte msg[PCKTLEN]) { // get 16bit CRC
+  Crc16 crc; // init CRC16 object
+  for (uint8_t i = 0;i<PCKTLEN-2;i++) {
+  crc.updateCrc(msg[i]);
+  }
+  return crc.getCrc();
+}
+
 void splitpacket(byte msg[PCKTLEN], byte part1[2], byte part2[2], byte part3[3]) { // Split array in variables
   part1[0] = msg[1];
   part1[1] = msg[2];
@@ -42,10 +51,18 @@ void splitpacket(byte msg[PCKTLEN], byte part1[2], byte part2[2], byte part3[3])
   part3[1] = msg[6];
 }
 
+// Declaring handler
+
+void PiRequete() {
+      Wire.write( buffer, sizeof(buffer) );
+        }
+
 void setup() {
 
-  man.setupReceive(RX_433, MAN_600);
-  man.beginReceiveArray(PCKTLEN, buffer);
+  man.setupReceive(RX_433, MAN_600); // Init 433 connection
+  man.beginReceiveArray(PCKTLEN, buffer); // begin listening
+  Wire.begin(0x24); // begin I2C connection as master
+  Wire.onRequest(PiRequete); // declaring request handler
 
   if (DEBUG) {  // Sending over Serial to make sure it works
     Serial.begin(9600);
@@ -85,8 +102,9 @@ void loop() {
     crc_rx.part[1]= buffer[PCKTLEN-1];
     buffer[PCKTLEN-2] = 0;
     buffer[PCKTLEN-1] = 0;
-    crc_local.ints = CRC16.ccitt(buffer, sizeof(buffer)); // Calculating own CRC
-
+    crc_local.ints = getcrc(buffer); // Calculating own CRC
+    buffer[PCKTLEN-2] = crc_rx.part[0];
+    buffer[PCKTLEN-1] = crc_rx.part[1];
     if (DEBUG) {  // Showing CRC
       Serial.print("Received CRC : ");
       Serial.print(crc_rx.part[0],HEX);
