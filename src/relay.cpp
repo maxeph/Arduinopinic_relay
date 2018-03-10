@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <Manchester.h>  //Initialising 433 wireless library
-#include <FastCRC.h>  //CRCcheck library
+#include <Crc16.h>  // CRCcheck library
 #include <Wire.h> // I2C library
 
 // Declaring definitions
@@ -22,7 +22,6 @@ union intarray { // shared memory for int and byte array to get its bytes
 // Declaring variables
 
 byte buffer[PCKTLEN] = {}; // init unsigned bytes to be sent over
-FastCRC16 CRC16;
 intarray itempext, itempeau, ihumid, crc_local, crc_rx;
 int nloop = 1; // counting n° of receipts
 
@@ -33,6 +32,14 @@ int bytes2int(byte arg[2]) { // Convert a 2byte array into int
   result.part[0] = arg[0];
   result.part[1] = arg[1];
   return result.ints;
+}
+
+int getcrc(byte msg[PCKTLEN]) { // get 16bit CRC
+  Crc16 crc; // init CRC16 object
+  for (uint8_t i = 0;i<sizeof(PCKTLEN);i++) {
+  crc.updateCrc(msg[i]);
+  }
+  return crc.getCrc();
 }
 
 void splitpacket(byte msg[PCKTLEN], byte part1[2], byte part2[2], byte part3[3]) { // Split array in variables
@@ -95,7 +102,7 @@ void loop() {
     crc_rx.part[1]= buffer[PCKTLEN-1];
     buffer[PCKTLEN-2] = 0;
     buffer[PCKTLEN-1] = 0;
-    crc_local.ints = CRC16.ccitt(buffer, sizeof(buffer)); // Calculating own CRC
+    crc_local.ints = getcrc(buffer); // Calculating own CRC
     buffer[PCKTLEN-2] = crc_rx.part[0];
     buffer[PCKTLEN-1] = crc_rx.part[1];
     if (DEBUG) {  // Showing CRC
