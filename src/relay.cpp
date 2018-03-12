@@ -10,7 +10,7 @@
 #define NBPARAM 3 // Number of int sent
 #define MSGLEN NBPARAM*2 // Msg len is 4 = 2 signed int (2 bytes each)
 #define PCKTLEN MSGLEN+3 // +1 for the lenght of the msgpacket +2 for CRC 16
-#define I2C_ADDR 0x24 // +1 for the length of the msgpacket +2 for CRC 16
+#define I2C_ADDR 0x24 // Slave adress
 
 // Declaring structs
 
