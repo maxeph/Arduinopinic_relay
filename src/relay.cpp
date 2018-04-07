@@ -21,9 +21,12 @@ union intarray { // shared memory for int and byte array to get its bytes
 
 // Declaring variables
 
-byte buffer[PCKTLEN] = {}; // init unsigned bytes to be sent over
+byte radio_rx[PCKTLEN] = {}; // init unsigned bytes to be receive
+byte i2C_tx[PCKTLEN] = {}; // init unsigned bytes to be sent
 intarray itempext, itempeau, ihumid, crc_local, crc_rx;
 int nloop = 1; // counting n° of receipts
+int ncrcok = 0;
+float successrate = 0;
 
 // Declaring functions
 
@@ -54,14 +57,14 @@ void splitpacket(byte msg[PCKTLEN], byte part1[2], byte part2[2], byte part3[3])
 // Declaring handler
 
 void PiRequete() {
-      Wire.write( buffer, sizeof(buffer) );
+      Wire.write( i2C_tx, sizeof(i2C_tx) );
         }
 
 void setup() {
 
   man.setupReceive(RX_433, MAN_600); // Init 433 connection
-  man.beginReceiveArray(PCKTLEN, buffer); // begin listening
-  Wire.begin(0x24); // begin I2C connection as master
+  man.beginReceiveArray(PCKTLEN, radio_rx); // begin listening
+  Wire.begin(I2C_ADDR); // begin I2C connection as master
   Wire.onRequest(PiRequete); // declaring request handler
 
   if (DEBUG) {  // Sending over Serial to make sure it works
@@ -75,64 +78,77 @@ void loop() {
   if (man.receiveComplete()) // When receipt
   {
     uint8_t receivedSize = 0;
-    receivedSize = buffer[0]; // Storing the length of the packet received
+    receivedSize = radio_rx[0]; // Storing the length of the packet received
 
     if (DEBUG) {
       Serial.print("########## PACKET N° "); // Showing raw data receivedSize
       Serial.print(nloop);
       Serial.println(" #################");
-      Serial.println("Raw data : ");
-      Serial.print("Packet length : ");
-      Serial.println(buffer[0],HEX);
+      Serial.print("RX PCKT LEN : ");
+      Serial.print(radio_rx[0],HEX);
       for(uint8_t i=1;i<receivedSize-2;i++) {
         if (i % 2 != 0) {
-          Serial.print("Msg n°");
+          Serial.print(" Msg n°");
           Serial.print((i/2)+1);
           Serial.print(" : ");
-          Serial.print(buffer[i],HEX);
+          Serial.print(radio_rx[i],HEX);
           Serial.print(" ");
         }
         else {
-          Serial.println(buffer[i],HEX);
+          Serial.print(radio_rx[i],HEX);
         }
       }
     }
 
-    crc_rx.part[0]= buffer[PCKTLEN-2]; // Received 2bytes CRC
-    crc_rx.part[1]= buffer[PCKTLEN-1];
-    buffer[PCKTLEN-2] = 0;
-    buffer[PCKTLEN-1] = 0;
-    crc_local.ints = getcrc(buffer); // Calculating own CRC
-    buffer[PCKTLEN-2] = crc_rx.part[0];
-    buffer[PCKTLEN-1] = crc_rx.part[1];
+    crc_rx.part[0]= radio_rx[PCKTLEN-2]; // Received 2bytes CRC
+    crc_rx.part[1]= radio_rx[PCKTLEN-1];
+    radio_rx[PCKTLEN-2] = 0;
+    radio_rx[PCKTLEN-1] = 0;
+    crc_local.ints = getcrc(radio_rx); // Calculating own CRC
+    radio_rx[PCKTLEN-2] = crc_rx.part[0];
+    radio_rx[PCKTLEN-1] = crc_rx.part[1];
+
     if (DEBUG) {  // Showing CRC
-      Serial.print("Received CRC : ");
+      Serial.println("");
+      Serial.print("CRC : ");
       Serial.print(crc_rx.part[0],HEX);
-      Serial.println(crc_rx.part[1],HEX);
-      Serial.print("Local CRC : ");
+      Serial.print(crc_rx.part[1],HEX);
+      Serial.print(" Local CRC : ");
       Serial.print(crc_local.part[0],HEX);
-      Serial.println(crc_local.part[1],HEX);
+      Serial.print(crc_local.part[1],HEX);
       if (crc_local.ints == crc_rx.ints) {
-        Serial.println("CRC Check ok");
+        Serial.println(" CRC Check ok");
       }
       else{
-        Serial.println("ERROR CRC!!!");
+        Serial.println(" ERROR CRC!!!");
       }
     }
 
 
-    splitpacket(buffer, itempext.part, itempeau.part, ihumid.part); // Splitting packet in various variables
+    if (crc_local.ints == crc_rx.ints) { // if and only if crc is ok, the array which will be sent is updated
+      for(uint8_t i=1;i<PCKTLEN;i++) {
+
+        i2C_tx[i] = radio_rx[i];
+
+
+    }
+    ncrcok++;
+  }
 
     if (DEBUG) {  // Showing Final values
-      Serial.print("Température extérieure : ");
-      Serial.println(float(itempext.ints)/100);
-      Serial.print("Température eau : ");
-      Serial.println(float(itempeau.ints)/100);
-      Serial.print("Humidité : ");
+      splitpacket(radio_rx, itempext.part, itempeau.part, ihumid.part); // Splitting packet in various variables
+      Serial.print("Temp ext : ");
+      Serial.print(float(itempext.ints)/100);
+      Serial.print(" Temp eau : ");
+      Serial.print(float(itempeau.ints)/100);
+      Serial.print(" Humid : ");
       Serial.println(float(ihumid.ints)/100);
+      Serial.print("CRC OK (%) : ");
+      successrate = float(ncrcok) / float(nloop) * 100;
+      Serial.println(successrate);
       nloop++;
     }
 
-    man.beginReceiveArray(PCKTLEN, buffer);
+    man.beginReceiveArray(PCKTLEN, radio_rx);
   }
 }
